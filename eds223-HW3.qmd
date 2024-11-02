@@ -3,6 +3,7 @@ output: html_document
 editor_options: 
   chunk_output_type: console
 ---
+
 ### Import Data
 
 First, we load the libraries and data.
@@ -47,7 +48,9 @@ st_crs(feb07v05) == st_crs(feb07v06)
 st_crs(feb16v05) == st_crs(feb16v06)
 ```
 
-Combine data sets.
+## Find Changes
+
+Create a raster for each day.
 
 ```{r}
 feb07 <- merge(feb07v05, feb07v06)
@@ -67,15 +70,104 @@ if(st_crs(feb07) == st_crs(feb16)) {
 } else{
   warning("Updating coordinate reference systems to match")
   # transform data to match
-  boundary <- st_transform(feb07, st_crs(feb16))
+  feb07 <- st_transform(feb07, st_crs(feb16))
 }
 ```
 
+Find the change in light
 
 ```{r}
-tm_shape(feb07) +
-  tm_raster(title = "Feb 7th") 
-tm_shape(feb16) +
-  tm_raster(title = "Feb 16th") 
+feb_diff <- (feb07 - feb16)
+```
+
+Reclassify the difference raster, assuming that any location that experienced a drop of more than 200 nW cm-2sr-1 experienced a blackout
+
+```{r}
+feb_diff[feb_diff < 200] <-  NA
+```
+
+vectorize the blackout mask
+
+```{r}
+blackout_sf <- st_make_valid(st_as_sf(as.polygons(feb_diff)))
+```
+
+Crop blackout vector to Houston area
+
+```{r}
+# create Houston boundary
+houston_bbox <- st_polygon(list(rbind(
+  c(-96.5, 29), c(-96.5, 30.5),
+  c(-94.5, 30.5), c(-94.5, 29),
+  c(-96.5, 29)
+))) %>% st_sfc(crs = 4326)
+```
+
+Ensure the CRS of each dataframe match
+
+```{r}
+blackout_sf <- st_transform(blackout_sf, crs = 3083)
+
+if(st_crs(blackout_sf) == st_crs(houston_bbox)) {
+  print("Coordinate reference systems match")
+} else{
+  warning("Updating coordinate reference systems to match")
+  # transform data to match
+  houston_bbox <- st_transform(houston_bbox, st_crs(blackout_sf))
+}
+```
+
+```{r}
+houston_blackout <- st_intersection(blackout_sf, houston_bbox)
+```
+
+```{r}
+tm_shape(houston_blackout) +
+  tm_polygons(title = "Feb Diff",
+            palette = c("forestgreen", "steelblue", "gold", "maroon")) +
+  tm_layout(legend.outside = TRUE)
+```
+
+
+## Exclude highways from the cropped blackout mask
+
+Import highway data
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| 
+hway_query <- "SELECT * FROM gis_osm_roads_free_1 WHERE fclass='motorway'"
+hway <- st_read(here::here("data", "gis_osm_roads_free_1.gpkg"),
+                   quiet = TRUE, query=hway_query)
+```
+
+```{r}
+if(st_crs(hway) == st_crs(houston_bbox)) {
+  print("Coordinate reference systems match")
+} else{
+  warning("Updating coordinate reference systems to match")
+  # transform data to match
+  hway <- st_transform(hway, st_crs(houston_bbox))
+}
+```
+
+```{r}
+hway <- st_intersection(hway, houston_bbox)
+```
+
+
+identify areas within 200m of all highways
+hint: you may need to use st_union
+
+```{r}
+hway_buffer <- st_buffer(hway, dist = 200)
+```
+
+
+find areas that experienced blackouts that are further than 200m from a highway
+
+```{r}
+htown_bo_buff <- st_difference(houston_blackout,hway_buffer)
 ```
 
