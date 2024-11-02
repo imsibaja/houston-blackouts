@@ -171,3 +171,9 @@ find areas that experienced blackouts that are further than 200m from a highway
 htown_bo_buff <- st_difference(houston_blackout,hway_buffer)
 ```
 
+```{r}
+tm_shape(hway_buffer) +
+  tm_polygons(title = "Feb Diff",
+            palette = c("forestgreen", "steelblue", "gold", "maroon")) +
+  tm_layout(legend.outside = TRUE)
+```
