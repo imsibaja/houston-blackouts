@@ -89,18 +89,23 @@ feb_diff[feb_diff < 200] <-  NA
 vectorize the blackout mask
 
 ```{r}
-blackout_sf <- st_make_valid(st_as_sf(as.polygons(feb_diff)))
+blackout_sf <- feb_diff %>% 
+  as.polygons() %>% 
+  st_as_sf() %>% 
+  st_make_valid()
 ```
 
 Crop blackout vector to Houston area
 
 ```{r}
 # create Houston boundary
-houston_bbox <- st_polygon(list(rbind(
-  c(-96.5, 29), c(-96.5, 30.5),
-  c(-94.5, 30.5), c(-94.5, 29),
-  c(-96.5, 29)
-))) %>% st_sfc(crs = 4326)
+houston_bbox <- st_bbox(c(xmin=-96.5,
+                          ymin=29,
+                          xmax=-94.5,
+                          ymax=30.5)) %>% 
+  st_as_sfc() %>% 
+  st_as_sf() %>% 
+  st_set_crs(st_crs(blackout_sf))
 ```
 
 Ensure the CRS of each dataframe match
@@ -123,9 +128,7 @@ houston_blackout <- st_intersection(blackout_sf, houston_bbox)
 
 ```{r}
 tm_shape(houston_blackout) +
-  tm_polygons(title = "Feb Diff",
-            palette = c("forestgreen", "steelblue", "gold", "maroon")) +
-  tm_layout(legend.outside = TRUE)
+  tm_polygons()
 ```
 
 
@@ -152,28 +155,48 @@ if(st_crs(hway) == st_crs(houston_bbox)) {
 }
 ```
 
-```{r}
-hway <- st_intersection(hway, houston_bbox)
-```
-
-
 identify areas within 200m of all highways
 hint: you may need to use st_union
 
 ```{r}
-hway_buffer <- st_buffer(hway, dist = 200)
+hway_buffer <- st_buffer(hway, dist = 200) %>% 
+  st_union() %>% 
+  st_as_sf()
 ```
 
 
 find areas that experienced blackouts that are further than 200m from a highway
 
 ```{r}
-htown_bo_buff <- st_difference(houston_blackout,hway_buffer)
+outside_hwy <- st_disjoint(houston_blackout, hway_buffer, sparse = FALSE)
+```
+
+
+```{r}
+tm_shape(hway_buffer) +
+  tm_polygons() +
+tm_shape(houston_blackout[outside_hwy,]) +
+  tm_dots() 
 ```
 
 ```{r}
 tm_shape(hway_buffer) +
-  tm_polygons(title = "Feb Diff",
-            palette = c("forestgreen", "steelblue", "gold", "maroon")) +
-  tm_layout(legend.outside = TRUE)
+  tm_polygons() +
+tm_shape(houston_blackout) +
+  tm_dots()
 ```
+
+## Identify homes likely impacted by blackouts
+
+identify homes that overlap with areas that experienced blackouts
+
+```{r}
+homes_query <- "SELECT *
+FROM gis_osm_buildings_a_free_1
+WHERE (type IS NULL AND name IS NULL)
+OR type in ('residential', 'apartments', 'house', 'static_caravan', 'detached')"
+
+homes <- st_read(here::here("data", "gis_osm_buildings_a_free_1.gpkg"),
+                   quiet = TRUE, query=homes_query)
+```
+
