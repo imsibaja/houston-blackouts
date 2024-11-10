@@ -18,7 +18,7 @@ library(tidyverse)
 library(testthat)
 library(kableExtra)
 library(patchwork)
-library(terra) # raster handling
+library(stars) 
 library(spData) # spatial data
 library(spDataLarge) # spatial data
 library(geodata) # spatial data
@@ -30,13 +30,13 @@ Up first are the night lights raster.
 #| code-fold: true
 #| code-summary: "Show the code"
 
-feb07v05 <- rast(here::here("data", "VNP46A1",
+feb07v05 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021038.h08v05.001.2021039064328.tif"))
-feb07v06 <- rast(here::here("data", "VNP46A1",
+feb07v06 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021038.h08v06.001.2021039064329.tif"))
-feb16v05 <- rast(here::here("data", "VNP46A1",
+feb16v05 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021047.h08v05.001.2021048091106.tif"))
-feb16v06 <- rast(here::here("data", "VNP46A1",
+feb16v06 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021047.h08v06.001.2021048091105.tif"))
 ```
 
@@ -53,8 +53,8 @@ st_crs(feb16v05) == st_crs(feb16v06)
 Create a raster for each day.
 
 ```{r}
-feb07 <- merge(feb07v05, feb07v06)
-feb16 <- merge(feb16v05, feb16v06)
+feb07 <- st_mosaic(feb07v05, feb07v06)
+feb16 <- st_mosaic(feb16v05, feb16v06)
 ```
 
 We can check if the combined datasets have the same coordinate systems.
@@ -73,6 +73,12 @@ if(st_crs(feb07) == st_crs(feb16)) {
   feb07 <- st_transform(feb07, st_crs(feb16))
 }
 ```
+Plot
+
+```{r}
+plot(feb07, main="attempt 1")
+plot(feb16, main="attempt 2")
+```
 
 Find the change in light
 
@@ -83,14 +89,13 @@ feb_diff <- (feb07 - feb16)
 Reclassify the difference raster, assuming that any location that experienced a drop of more than 200 nW cm-2sr-1 experienced a blackout
 
 ```{r}
-feb_diff[feb_diff < 200] <-  NA
+feb_diff <- cut(feb_diff, c(200,Inf), labels="outage")
 ```
 
 vectorize the blackout mask
 
 ```{r}
 blackout_sf <- feb_diff %>% 
-  as.polygons() %>% 
   st_as_sf() %>% 
   st_make_valid()
 ```
@@ -123,7 +128,8 @@ if(st_crs(blackout_sf) == st_crs(houston_bbox)) {
 ```
 
 ```{r}
-houston_blackout <- st_intersection(blackout_sf, houston_bbox)
+houston_mask <- st_intersects(blackout_sf, houston_bbox, sparse = FALSE)
+houston_blackout <- blackout_sf[houston_mask, ]
 ```
 
 ```{r}
@@ -160,30 +166,22 @@ hint: you may need to use st_union
 
 ```{r}
 hway_buffer <- st_buffer(hway, dist = 200) %>% 
-  st_union() %>% 
-  st_as_sf()
+  st_union() 
 ```
 
+```{r}
+plot(hway_buffer)
+```
 
 find areas that experienced blackouts that are further than 200m from a highway
 
 ```{r}
-outside_hwy <- st_disjoint(houston_blackout, hway_buffer, sparse = FALSE)
+outside_hwy <- st_difference(houston_blackout, hway_buffer)
 ```
 
 
 ```{r}
-tm_shape(hway_buffer) +
-  tm_polygons() +
-tm_shape(houston_blackout[outside_hwy,]) +
-  tm_dots() 
-```
-
-```{r}
-tm_shape(hway_buffer) +
-  tm_polygons() +
-tm_shape(houston_blackout) +
-  tm_dots()
+plot(outside_hwy) 
 ```
 
 ## Identify homes likely impacted by blackouts
@@ -197,6 +195,71 @@ WHERE (type IS NULL AND name IS NULL)
 OR type in ('residential', 'apartments', 'house', 'static_caravan', 'detached')"
 
 homes <- st_read(here::here("data", "gis_osm_buildings_a_free_1.gpkg"),
-                   quiet = TRUE, query=homes_query)
+                   quiet = TRUE, query=homes_query) 
 ```
+
+```{r}
+if(st_crs(homes) == st_crs(houston_blackout)) {
+  print("Coordinate reference systems match")
+} else{
+  warning("Updating coordinate reference systems to match")
+  # transform data to match
+  homes <- st_transform(homes, st_crs(houston_blackout))
+}
+```
+
+```{r}
+homes_blackout <- homes[outside_hwy, , op=st_intersects]
+```
+
+```{r}
+plot(homes_blackout)
+```
+
+Estimate of the blackout
+
+```{r}
+blackout_home_number <- nrow(blackout_residential
+print(paste0(blackout_home_number), ' residential buildings were affected by the blackouts'))
+```
+
+
+## Identify the census tracts likely impacted by blackout
+
+join the median household income from the previous 12 months to the census tract geometries
+hint: make sure to join by geometry ID
+
+Median income is B19013e1
+```{r}
+income <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="X19_INCOME") %>% 
+  dplyr::select(B19013e1, GEOID) %>% 
+  rename(median_income = B19013e1, GEOID_Data = GEOID)
+
+acs_geom <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="ACS_2019_5YR_TRACT_48_TEXAS")
+
+income_geom <- left_join(acs_geom, income, by = "GEOID_Data")
+```
+
+```{r}
+if(st_crs(income_geom) == st_crs(homes_blackout)) {
+  print("Coordinate reference systems match")
+} else{
+  warning("Updating coordinate reference systems to match")
+  # transform data to match
+  income_geom <- st_transform(income_geom, st_crs(homes_blackout))
+}
+```
+
+identify census tracts that that contained homes that experienced blackouts
+
+```{r}
+census_blackout <- st_filter(income_geom, homes_blackout)
+
+
+# data frame with houston census
+houston_income <- st_filter(income_geom, houston_bbox)
+
+```
+
+
 
