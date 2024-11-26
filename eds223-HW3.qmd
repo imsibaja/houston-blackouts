@@ -1,34 +1,42 @@
 ---
-output: html_document
+title: "Homework Assignment #3"
+subtitle: "Identifying the impacts of extreme weather"
+author: "Ian Morris-Sibaja"
+date: last-modified
+execute: 
+  eval: true
+  warning: false
+  message: false
+  results: hide 
+format:
+  html:
+    toc: true
 editor_options: 
   chunk_output_type: console
 ---
+## Background
 
-### Import Data
+Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed.
+
+## Import Data
 
 First, we load the libraries and data.
 
 ```{r}
 #| code-fold: true
-#| code-summary: "Show the code"
+#| code-summary: "Import libraries"
 library(sf)
 library(here)
 library(tmap)
 library(tidyverse)
 library(testthat)
 library(kableExtra)
-library(patchwork)
 library(stars) 
-library(spData) # spatial data
-library(spDataLarge) # spatial data
-library(geodata) # spatial data
 ```
-
-Up first are the night lights raster.
 
 ```{r}
 #| code-fold: true
-#| code-summary: "Show the code"
+#| code-summary: "Import the night lights raster"
 
 feb07v05 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021038.h08v05.001.2021039064328.tif"))
@@ -40,31 +48,65 @@ feb16v06 <- stars::read_stars(here::here("data", "VNP46A1",
                             "VNP46A1.A2021047.h08v06.001.2021048091105.tif"))
 ```
 
-Then, we check if the datasets have the same coordinate systems.
+```{r}
+#| code-fold: true
+#| code-summary: "Import highway data"
+#| 
+hway_query <- "SELECT * FROM gis_osm_roads_free_1 WHERE fclass='motorway'"
+hway <- st_read(here::here("data", "gis_osm_roads_free_1.gpkg"),
+                   quiet = TRUE, query=hway_query)
+```
 
 ```{r}
-# check if CRS of each dataset are equal
+#| code-fold: true
+#| code-summary: "Import housing data"
+#| 
+homes_query <- "SELECT *
+FROM gis_osm_buildings_a_free_1
+WHERE (type IS NULL AND name IS NULL)
+OR type in ('residential', 'apartments', 'house', 'static_caravan', 'detached')"
+
+homes <- st_read(here::here("data", "gis_osm_buildings_a_free_1.gpkg"),
+                   quiet = TRUE, query=homes_query) 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Import income and census data"
+
+# From the metadata, Median income is B19013e1.
+
+income <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="X19_INCOME") %>% 
+  dplyr::select(B19013e1, GEOID) %>% 
+  rename(median_income = B19013e1, GEOID_Data = GEOID)
+
+acs_geom <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="ACS_2019_5YR_TRACT_48_TEXAS")
+```
+
+## Find Changes in Lights after Blackout
+
+First, check if the two different days datasets have the same coordinate systems.
+
+```{r}
+# Check if CRS of each dataset are equal
 st_crs(feb07v05) == st_crs(feb07v06)
 st_crs(feb16v05) == st_crs(feb16v06)
 ```
 
-## Find Changes
-
-Create a raster for each day.
+Next, create a raster for each day.
 
 ```{r}
+# Create raster for each day 
 feb07 <- st_mosaic(feb07v05, feb07v06)
 feb16 <- st_mosaic(feb16v05, feb16v06)
 ```
 
-We can check if the combined datasets have the same coordinate systems.
+Now, we can check if the combined datasets have the same coordinate systems.
 
 ```{r}
-st_crs(feb07) == st_crs(feb16)
-```
+#| code-fold: true
+#| code-summary: "Check if CRS of each dataset are equal, update if not"
 
-```{r}
-# check if coordinate reference systems match
 if(st_crs(feb07) == st_crs(feb16)) {
   print("Coordinate reference systems match")
 } else{
@@ -73,36 +115,54 @@ if(st_crs(feb07) == st_crs(feb16)) {
   feb07 <- st_transform(feb07, st_crs(feb16))
 }
 ```
-Plot
+
+### Plot The Difference
+
+A set of maps comparing night light intensities before and after the first to storms
 
 ```{r}
-plot(feb07, main="attempt 1")
-plot(feb16, main="attempt 2")
+#| code-fold: true
+#| code-summary: "Plot the two maps to visualize the difference"
+
+# Plot the two maps
+plot(feb07, main="Houston Lights on Febuary 7th")
+plot(feb16, main="Houston Lights on Febuary 16th")
 ```
 
-Find the change in light
+## Create blackout mask
+
+Find the change in night lights intensity (presumably) caused by the storm
 
 ```{r}
+# Find change in night light intensities
 feb_diff <- (feb07 - feb16)
 ```
 
-Reclassify the difference raster, assuming that any location that experienced a drop of more than 200 nW cm-2sr-1 experienced a blackout
+Reclassify the difference raster, assuming that any location that experienced a drop of more than 200 nW cm-2sr-1 experienced a blackout and assign NA to all locations that experienced a drop of less than 200 nW cm-2sr-1 change
 
 ```{r}
-feb_diff <- cut(feb_diff, c(200,Inf), labels="outage")
+# Reclassify the difference raster
+feb_diff[feb_diff <200] <- NA
 ```
 
-vectorize the blackout mask
+Vectorize the blackout mask
 
 ```{r}
+# Vectorize blackout mask
+# hint: use st_as_sf() to convert from a raster to a vector
+#       and fix any invalid geometries with st_make_valid()
 blackout_sf <- feb_diff %>% 
   st_as_sf() %>% 
   st_make_valid()
 ```
 
-Crop blackout vector to Houston area
+Crop (spatially subset) the blackout mask to the Houston area as defined by the following coordinates:
+(-96.5, 29), (-96.5, 30.5), (-94.5, 30.5), (-94.5, 29)
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Create Houston bounding box"
+ 
 # create Houston boundary
 houston_bbox <- st_bbox(c(xmin=-96.5,
                           ymin=29,
@@ -113,9 +173,12 @@ houston_bbox <- st_bbox(c(xmin=-96.5,
   st_set_crs(st_crs(blackout_sf))
 ```
 
-Ensure the CRS of each dataframe match
+Re-project the cropped blackout dataset to EPSG:3083 (NAD83 / Texas Centric Albers Equal Area)
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Check if CRS of each dataset are equal, update if not"
+
 blackout_sf <- st_transform(blackout_sf, crs = 3083)
 
 if(st_crs(blackout_sf) == st_crs(houston_bbox)) {
@@ -127,31 +190,23 @@ if(st_crs(blackout_sf) == st_crs(houston_bbox)) {
 }
 ```
 
-```{r}
-houston_mask <- st_intersects(blackout_sf, houston_bbox, sparse = FALSE)
-houston_blackout <- blackout_sf[houston_mask, ]
-```
+Limit dataframe of blackout areas to the Houston Region
 
 ```{r}
-tm_shape(houston_blackout) +
-  tm_polygons()
+# Crop dataframe to Houston Region
+houston_mask <- st_intersects(blackout_sf, houston_bbox, sparse = FALSE)
+houston_blackout <- blackout_sf[houston_mask, ]
 ```
 
 
 ## Exclude highways from the cropped blackout mask
 
-Import highway data
+First we ensure CRS of dataframes are the same.
 
 ```{r}
 #| code-fold: true
-#| code-summary: "Show the code"
-#| 
-hway_query <- "SELECT * FROM gis_osm_roads_free_1 WHERE fclass='motorway'"
-hway <- st_read(here::here("data", "gis_osm_roads_free_1.gpkg"),
-                   quiet = TRUE, query=hway_query)
-```
+#| code-summary: "Check if CRS of each dataset are equal, update if not"
 
-```{r}
 if(st_crs(hway) == st_crs(houston_bbox)) {
   print("Coordinate reference systems match")
 } else{
@@ -161,44 +216,29 @@ if(st_crs(hway) == st_crs(houston_bbox)) {
 }
 ```
 
-identify areas within 200m of all highways
-hint: you may need to use st_union
+Identify areas within 200m of all highways.
 
 ```{r}
+# Create a buffer of 200m highway radius
 hway_buffer <- st_buffer(hway, dist = 200) %>% 
   st_union() 
 ```
 
-```{r}
-plot(hway_buffer)
-```
-
-find areas that experienced blackouts that are further than 200m from a highway
+Find areas that experienced blackouts that are further than 200m from a highway.
 
 ```{r}
+# Find blackouts outside the buffer
 outside_hwy <- st_difference(houston_blackout, hway_buffer)
-```
-
-
-```{r}
-plot(outside_hwy) 
 ```
 
 ## Identify homes likely impacted by blackouts
 
-identify homes that overlap with areas that experienced blackouts
+Identify homes that overlap with areas that experienced blackouts
 
 ```{r}
-homes_query <- "SELECT *
-FROM gis_osm_buildings_a_free_1
-WHERE (type IS NULL AND name IS NULL)
-OR type in ('residential', 'apartments', 'house', 'static_caravan', 'detached')"
+#| code-fold: true
+#| code-summary: "Check if CRS of each dataset are equal, update if not"
 
-homes <- st_read(here::here("data", "gis_osm_buildings_a_free_1.gpkg"),
-                   quiet = TRUE, query=homes_query) 
-```
-
-```{r}
 if(st_crs(homes) == st_crs(houston_blackout)) {
   print("Coordinate reference systems match")
 } else{
@@ -209,38 +249,59 @@ if(st_crs(homes) == st_crs(houston_blackout)) {
 ```
 
 ```{r}
+# Find homes that intersect within the blackouts
 homes_blackout <- homes[outside_hwy, , op=st_intersects]
 ```
 
+Homes in Houston that Experienced Blackouts:
+
+The more opaque a red dot is, the more higher the density of homes with a blackout in that area.
+
 ```{r}
-plot(homes_blackout)
+#| code-fold: true
+#| code-summary: "Plot homes in Houston that experienced blackouts"
+
+tm_shape(acs_geom, bbox = houston_bbox) +
+  tm_borders() +
+tm_shape(homes_blackout) +
+  tm_dots(col = "darkred", 
+          size = 0.05, 
+          alpha = 0.2, 
+          showNA = FALSE, 
+          title = "Homes in Houston that\nExperienced Blackouts") +
+  tm_compass(position = c("RIGHT", "BOTTOM")) + 
+  tm_scale_bar(position = c("RIGHT", "BOTTOM"), width=.2) +  # Position the scale bar
+  tm_layout(main.title = "Homes in Houston that Experienced Blackouts", 
+            main.title.size = 1.4,
+            main.title.position = c("center", "top"),
+            title.size = 0.6,
+            legend.position = c("LEFT", "BOTTOM"),
+            outer.margins = c(0.02, 0.02, 0.02, 0.02),  # Tighten the outer margins to avoid excess space
+            inner.margins = c(0, 0, 0, 0))
 ```
 
-Estimate of the blackout
+Estimate of number of homes in the blackout
 
 ```{r}
-blackout_home_number <- nrow(blackout_residential
-print(paste0(blackout_home_number), ' residential buildings were affected by the blackouts'))
+# Estimate number of blackouts
+blackout_home_number <- nrow(homes_blackout)
+print(paste0(blackout_home_number, ' homes lost power'))
 ```
 
 
 ## Identify the census tracts likely impacted by blackout
 
-join the median household income from the previous 12 months to the census tract geometries
-hint: make sure to join by geometry ID
+Join the median household income from the previous 12 months to the census tract geometries
 
-Median income is B19013e1
 ```{r}
-income <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="X19_INCOME") %>% 
-  dplyr::select(B19013e1, GEOID) %>% 
-  rename(median_income = B19013e1, GEOID_Data = GEOID)
-
-acs_geom <- read_sf(here::here("data", "ACS_2019_5YR_TRACT_48_TEXAS.gdb"), layer="ACS_2019_5YR_TRACT_48_TEXAS")
-
+# Join income data with cencus tract data
 income_geom <- left_join(acs_geom, income, by = "GEOID_Data")
 ```
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Check if CRS of each dataset are equal, update if not"
+
 if(st_crs(income_geom) == st_crs(homes_blackout)) {
   print("Coordinate reference systems match")
 } else{
@@ -250,16 +311,101 @@ if(st_crs(income_geom) == st_crs(homes_blackout)) {
 }
 ```
 
-identify census tracts that that contained homes that experienced blackouts
+Identify census tracts that that contained homes that experienced blackouts
 
 ```{r}
+# Filter and crop census tracts with and without blackouts
 census_blackout <- st_filter(income_geom, homes_blackout)
+census_blackout <- st_crop(census_blackout, houston_bbox)
 
+census_nonblackout <- st_filter(income_geom, homes_blackout, .predicate = st_disjoint)
+census_nonblackout <- st_crop(census_nonblackout, houston_bbox)
 
-# data frame with houston census
-houston_income <- st_filter(income_geom, houston_bbox)
+# Dataframe with Houston census
+census_tracts_full <- st_crop(income_geom, houston_bbox)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Create dummy variables for ease of plotting"
+
+census_blackout$is_affected <- "Affected"
+census_nonblackout$is_affected <- "Not Affected"
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Plot blackouts and median income in census tracts"
+
+tmap_mode("plot")
+tm_shape(census_tracts_full) +
+  tm_polygons("median_income", 
+              palette = "viridis", 
+              title = "Median Income",
+              border.col = NULL,
+              showNA = FALSE, 
+              colorNA = NULL,
+              lwd = 0.5) +
+  tm_shape(census_blackout) + 
+  tm_fill(col = "maroon", alpha = 0.2, showNA = FALSE) +
+  tm_borders(col = "darkred") +
+  tm_dots(col = "is_affected", # Use the dummy variable
+          palette = "darkred", 
+          size = 0.05, 
+          alpha = 0.5, 
+          showNA = FALSE, 
+          title = "Census Tracts Affected by Blackouts") + 
+  tm_compass(position = c("RIGHT", "BOTTOM")) + 
+  tm_scale_bar(position = c("RIGHT", "BOTTOM")) +  # Position the scale bar
+  tm_layout(main.title = "Blackouts and Median Income in Census Tracts",
+            main.title.size = 1.4,
+            main.title.position = c("left", "top"),
+            legend.outside = TRUE, 
+            legend.position = c("left", "bottom"),
+            bg.color = "skyblue1",  # Set background to blue
+            outer.margins = c(0.02, 0.02, 0.02, 0.02),  # Tighten the outer margins to avoid excess space
+            inner.margins = c(0, 0, 0, 0))  # Remove internal margins that could contribute to excessive background
+
 
 ```
 
 
+```{r}
+#| code-fold: true
+#| code-summary: "Visualize blackout distributions against median income"
 
+ggplot(census_blackout, aes(fill=is_affected)) +  
+  geom_histogram(data= census_nonblackout, 
+                 aes(x = median_income, 
+                     fill=is_affected), 
+                 alpha = .9,
+                 bins = 50) +
+  geom_histogram(aes(x = median_income, 
+                     fill = is_affected), 
+                 alpha = .7,
+                 bins = 50)  +
+  theme_linedraw() +
+  scale_fill_manual(name="Affected by Blackout?",values=c("orange","blue"))+
+  ggtitle("Distribution of Median Income of\nHomes in Houston by Blackout Status") +
+  xlab("Median Income") +
+  ylab("House Count") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+## Reflection
+
+We found that 157,970 homes had been affected by Texas’s 2021 energy crisis, which in total seems to be a bit less than those not affected by the blackout. There does not seem to be a significant difference in the distribution of median incomes between those affected. However, limitations due to the day the data was taken, cloud coverage and even our data filtering may exclude variables important for the insights necessary to create a more thorough analysis.The analysis could include if blackout distributions by median income were truly non significant in difference. With more data, it is possible socioeconomic discrepancies may arise.
+
+## Citations
+```{r}
+#| code-fold: true
+#| code-summary: "Reveal code"
+tribble(
+  ~Data, ~Citation, ~Link,
+  "Night light data from Level-1 and Atmospheric Archive & Distribution System Distributed Active Archive Center (LAADS DAAC)", "Menzel, W.P., Frey, R.A., and Baum, B.A. (2015). Terra/MODIS Cloud Product 5-Min L2 Swath 1 km and 5 km, C6, NASA Level-1 and Atmosphere Archive & Distribution System (LAADS) Distributed Active Archive Center (DAAC), Goddard Space Flight Center, Greenbelt, MD. [http://dx.doi.org/10.5067/MODIS/MOD06_L2.006]", "[LAADS DAAC](https://ladsweb.modaps.eosdis.nasa.gov/)",
+  "Open Street Map (OSM) Buildings and Roads data", "OpenStreetMap contributors. (2015) Planet dump North America. Retrieved from https://planet.openstreetmap.or", "[OSM](https://planet.openstreetmap.org/)",
+  "Socioeconomic data from the American Community Survey", "U.S. Census Bureau. (2019). 2019 American Community Survey Public Use Microdata Samples.  Retrieved from https://factfinder.census.gov/faces/nav/jsf/pages/searchresults.xhtml?refresh=t", "[ACS](https://www.census.gov/programs-surveys/acs/data.html)"
+) %>% 
+  kable()
+```
