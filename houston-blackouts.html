@@ -7,9 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Ian Morris-Sibaja">
-<meta name="dcterms.date" content="2024-11-25">
+<meta name="dcterms.date" content="2024-12-07">
 
-<title>Homework Assignment #3</title>
+<title>Identifying the impacts of extreme weather</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -59,16 +59,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="eds223-HW3_files/libs/clipboard/clipboard.min.js"></script>
-<script src="eds223-HW3_files/libs/quarto-html/quarto.js"></script>
-<script src="eds223-HW3_files/libs/quarto-html/popper.min.js"></script>
-<script src="eds223-HW3_files/libs/quarto-html/tippy.umd.min.js"></script>
-<script src="eds223-HW3_files/libs/quarto-html/anchor.min.js"></script>
-<link href="eds223-HW3_files/libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="eds223-HW3_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="eds223-HW3_files/libs/bootstrap/bootstrap.min.js"></script>
-<link href="eds223-HW3_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="eds223-HW3_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="houston-blackouts_files/libs/clipboard/clipboard.min.js"></script>
+<script src="houston-blackouts_files/libs/quarto-html/quarto.js"></script>
+<script src="houston-blackouts_files/libs/quarto-html/popper.min.js"></script>
+<script src="houston-blackouts_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="houston-blackouts_files/libs/quarto-html/anchor.min.js"></script>
+<link href="houston-blackouts_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="houston-blackouts_files/libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="houston-blackouts_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="houston-blackouts_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="houston-blackouts_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="dark">
 
 
 </head>
@@ -81,7 +81,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#background" id="toc-background" class="nav-link active" data-scroll-target="#background">Background</a></li>
+  <li><a href="#about" id="toc-about" class="nav-link active" data-scroll-target="#about">About</a></li>
   <li><a href="#import-data" id="toc-import-data" class="nav-link" data-scroll-target="#import-data">Import Data</a></li>
   <li><a href="#find-changes-in-lights-after-blackout" id="toc-find-changes-in-lights-after-blackout" class="nav-link" data-scroll-target="#find-changes-in-lights-after-blackout">Find Changes in Lights after Blackout</a>
   <ul class="collapse">
@@ -100,8 +100,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Homework Assignment #3</h1>
-<p class="subtitle lead">Identifying the impacts of extreme weather</p>
+<h1 class="title">Identifying the impacts of extreme weather</h1>
 </div>
 
 
@@ -118,7 +117,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">November 25, 2024</p>
+      <p class="date">December 7, 2024</p>
     </div>
   </div>
   
@@ -130,9 +129,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<section id="background" class="level2">
-<h2 class="anchored" data-anchor-id="background">Background</h2>
-<p>Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed.</p>
+<section id="about" class="level2">
+<h2 class="anchored" data-anchor-id="about">About</h2>
+<p>Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed. This integrated approach leverages remote sensing and spatial analysis to understand the event’s implications:</p>
+<ul>
+<li>Using vector and raster data to analyze environmental impacts on household data.</li>
+<li>Streamlining geospatial data collection, processing, and visualization.</li>
+<li>Analyze intersection of environmental effects and income disparities.</li>
+</ul>
 </section>
 <section id="import-data" class="level2">
 <h2 class="anchored" data-anchor-id="import-data">Import Data</h2>
@@ -243,7 +247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eds223-HW3_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="houston-blackouts_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -254,7 +258,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eds223-HW3_files/figure-html/unnamed-chunk-9-2.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="houston-blackouts_files/figure-html/unnamed-chunk-9-2.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -390,7 +394,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eds223-HW3_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="houston-blackouts_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -409,7 +413,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="identify-the-census-tracts-likely-impacted-by-blackout">Identify the census tracts likely impacted by blackout</h2>
 <p>Join the median household income from the previous 12 months to the census tract geometries</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join income data with cencus tract data</span></span>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Join income data with census tract data</span></span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>income_geom <span class="ot">&lt;-</span> <span class="fu">left_join</span>(acs_geom, income, <span class="at">by =</span> <span class="st">"GEOID_Data"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
@@ -478,7 +482,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eds223-HW3_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="houston-blackouts_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -506,7 +510,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="eds223-HW3_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="houston-blackouts_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
@@ -514,7 +518,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="reflection" class="level2">
 <h2 class="anchored" data-anchor-id="reflection">Reflection</h2>
-<p>We found that 157,970 homes had been affected by Texas’s 2021 energy crisis, which in total seems to be a bit less than those not affected by the blackout. There does not seem to be a significant difference in the distribution of median incomes between those affected. However, limitations due to the day the data was taken, cloud coverage and even our data filtering may exclude variables important for the insights necessary to create a more thorough analysis.The analysis could include if blackout distributions by median income were truly non significant in difference. With more data, it is possible socioeconomic discrepancies may arise.</p>
+<p>We found that 157,970 homes had been affected by Texas’s 2021 energy crisis, which in total seems to be a bit less than those not affected by the blackout. There does not seem to be a significant difference in the distribution of median incomes between those affected. However, limitations due to the day the data was taken, cloud coverage and even our data filtering may exclude variables important for the insights necessary to create a more thorough analysis. The analysis could include if blackout distributions by median income were truly non significant in difference. With more data, it is possible socioeconomic discrepancies may arise.</p>
 </section>
 <section id="citations" class="level2">
 <h2 class="anchored" data-anchor-id="citations">Citations</h2>

@@ -1,6 +1,5 @@
 ---
-title: "Homework Assignment #3"
-subtitle: "Identifying the impacts of extreme weather"
+title: "Identifying the impacts of extreme weather"
 author: "Ian Morris-Sibaja"
 date: last-modified
 execute: 
@@ -13,10 +12,16 @@ format:
     toc: true
 editor_options: 
   chunk_output_type: console
+theme: darkly
 ---
-## Background
 
-Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed.
+## About
+
+Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed. This integrated approach leverages remote sensing and spatial analysis to understand the event's implications:
+
+-   Using vector and raster data to analyze environmental impacts on household data.
+-   Streamlining geospatial data collection, processing, and visualization.
+-   Analyze intersection of environmental effects and income disparities.
 
 ## Import Data
 
@@ -294,7 +299,7 @@ print(paste0(blackout_home_number, ' homes lost power'))
 Join the median household income from the previous 12 months to the census tract geometries
 
 ```{r}
-# Join income data with cencus tract data
+# Join income data with census tract data
 income_geom <- left_join(acs_geom, income, by = "GEOID_Data")
 ```
 
@@ -395,7 +400,7 @@ ggplot(census_blackout, aes(fill=is_affected)) +
 
 ## Reflection
 
-We found that 157,970 homes had been affected by Texas’s 2021 energy crisis, which in total seems to be a bit less than those not affected by the blackout. There does not seem to be a significant difference in the distribution of median incomes between those affected. However, limitations due to the day the data was taken, cloud coverage and even our data filtering may exclude variables important for the insights necessary to create a more thorough analysis.The analysis could include if blackout distributions by median income were truly non significant in difference. With more data, it is possible socioeconomic discrepancies may arise.
+We found that 157,970 homes had been affected by Texas’s 2021 energy crisis, which in total seems to be a bit less than those not affected by the blackout. There does not seem to be a significant difference in the distribution of median incomes between those affected. However, limitations due to the day the data was taken, cloud coverage and even our data filtering may exclude variables important for the insights necessary to create a more thorough analysis. The analysis could include if blackout distributions by median income were truly non significant in difference. With more data, it is possible socioeconomic discrepancies may arise.
 
 ## Citations
 ```{r}
