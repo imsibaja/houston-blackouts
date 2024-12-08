@@ -22,7 +22,7 @@ Climate change is driving more frequent and intense extreme weather events with 
 ```
 
 ## Data
-###Night lights
+### Night lights
 
 Satellite data on 2021-02-07 and 2021-02-16 from [NASA’s Level-1 and Atmospheric Archive & Distribution System Distributed Active Archive Center (LAADS DAAC)](https://ladsweb.modaps.eosdis.nasa.gov/). Many NASA Earth data products are distributed in 10x10 degree tiles in sinusoidal equal-area projection. Tiles are identified by their horizontal and vertical position in the grid. Houston lies on the border of tiles h08v05 and h08v06. We therefore need to download two tiles per date.
 
