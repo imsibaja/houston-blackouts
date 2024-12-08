@@ -1,5 +1,4 @@
-# Prioritizing Potential Aquaculture
-## A Functional Analysis of West Coast Economic Zones
+# Identifying the impacts of extreme weather
 Author: Ian Morris-Sibaja
 
 ![Image](https://static01.nyt.com/images/2021/02/19/us/19texas-victims-new/merlin_183952452_17e0e49e-df85-4d90-bfac-3468a4ee3513-superJumbo.jpg?quality=75&auto=webp) Storm Damage in Austin, Texas [New York Times](https://www.nytimes.com/2021/02/19/us/texas-deaths-winter-storm.html)
