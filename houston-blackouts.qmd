@@ -1,27 +1,63 @@
 ---
-title: "Identifying the impacts of extreme weather"
+title: "Identifying the Impacts of Extreme Weather"
 author: "Ian Morris-Sibaja"
-date: last-modified
+date: "12-24-2024"
+image: "https://static01.nyt.com/images/2021/02/19/us/19texas-victims-new/merlin_183952452_17e0e49e-df85-4d90-bfac-3468a4ee3513-superJumbo.jpg?quality=75&auto=webp"
 execute: 
   eval: true
   warning: false
   message: false
-  results: hide 
+  results: hide
 format:
   html:
     toc: true
 editor_options: 
   chunk_output_type: console
-theme: darkly
 ---
+
+![Storm Damage in Austin, Texas](https://static01.nyt.com/images/2021/02/19/us/19texas-victims-new/merlin_183952452_17e0e49e-df85-4d90-bfac-3468a4ee3513-superJumbo.jpg?quality=75&auto=webp)
+
+Source: [New York Times](https://www.nytimes.com/2021/02/19/us/texas-deaths-winter-storm.html)
 
 ## About
 
-Climate change is driving more frequent and intense extreme weather events with severe consequences. For example, in February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this assignment, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed. This integrated approach leverages remote sensing and spatial analysis to understand the event's implications:
+Climate change is driving more frequent and intense extreme weather events with severe consequences. In February 2021, Texas experienced a major power crisis caused by three severe winter storms. In this project, I estimate the number of homes in the Houston metropolitan area that lost power during these storms and analyze whether the impacts were disproportionately distributed. This integrated approach leverages remote sensing and spatial analysis to understand the event's implications:
 
--   Using vector and raster data to analyze environmental impacts on household data.
--   Streamlining geospatial data collection, processing, and visualization.
--   Analyze intersection of environmental effects and income disparities.
+- Using vector and raster data to analyze environmental impacts on household data.
+- Streamlining geospatial data collection, processing, and visualization.
+- Analyzing intersections of environmental effects and income disparities.
+
+
+## Data
+
+### Night Lights
+Satellite data for 2021-02-07 and 2021-02-16 from [NASA LAADS DAAC](https://ladsweb.modaps.eosdis.nasa.gov/). Houston lies on the border of tiles h08v05 and h08v06, so we download two tiles per date.
+
+**Files:**
+
+- `VNP46A1.A2021038.h08v05.001.2021039064328.tif` —> 2021-02-07, tile h08v05  
+- `VNP46A1.A2021038.h08v06.001.2021039064329.tif` —> 2021-02-07, tile h08v06  
+- `VNP46A1.A2021047.h08v05.001.2021048091106.tif` —> 2021-02-16, tile h08v05  
+- `VNP46A1.A2021047.h08v06.001.2021048091105.tif` —> 2021-02-16, tile h08v06  
+
+### Roads
+Road data may influence night light patterns. Obtained from [OpenStreetMap via Geofabrik](https://download.geofabrik.de/).
+
+**File:** `gis_osm_roads_free_1.gpkg`
+
+### Houses
+Housing data also from [OSM via Geofabrik](https://download.geofabrik.de/).
+
+**File:** `gis_osm_buildings_a_free_1.gpkg`
+
+### Socioeconomic
+Socioeconomic data comes from the [U.S. Census Bureau ACS](https://www.census.gov/programs-surveys/acs/data.html). We use the Texas-specific geodatabase for census tract-level median income.
+
+**Files:**
+
+- `ACS_2019_5YR_TRACT_48_TEXAS.gdb`
+- Layer: `ACS_2019_5YR_TRACT_48_TEXAS`  
+
 
 ## Import Data
 
@@ -275,7 +311,7 @@ tm_shape(homes_blackout) +
           showNA = FALSE, 
           title = "Homes in Houston that\nExperienced Blackouts") +
   tm_compass(position = c("RIGHT", "BOTTOM")) + 
-  tm_scale_bar(position = c("RIGHT", "BOTTOM"), width=.2) +  # Position the scale bar
+  #tm_scale_bar(position = c("RIGHT", "BOTTOM"), width=.2) +  # Position the scale bar
   tm_layout(main.title = "Homes in Houston that Experienced Blackouts", 
             main.title.size = 1.4,
             main.title.position = c("center", "top"),
@@ -339,37 +375,54 @@ census_nonblackout$is_affected <- "Not Affected"
 ```
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Plot blackouts and median income in census tracts"
-
-tmap_mode("plot")
 tm_shape(census_tracts_full) +
-  tm_polygons("median_income", 
-              palette = "viridis", 
-              title = "Median Income",
-              border.col = NULL,
-              showNA = FALSE, 
-              colorNA = NULL,
-              lwd = 0.5) +
-  tm_shape(census_blackout) + 
-  tm_fill(col = "maroon", alpha = 0.2, showNA = FALSE) +
+  tm_polygons(
+    fill = "median_income",
+    fill.scale = tm_scale_continuous(
+      values = "viridis",
+      value.na = NA
+    ),
+    fill.legend = tm_legend(
+      title = "Median Income",
+      na.show = FALSE
+    ),
+    border.col = NA,
+    lwd = 0.5
+  ) +
+
+tm_shape(census_blackout) +
+  tm_fill(
+    fill = "maroon",
+    fill_alpha = 0.2,
+    fill.legend = tm_legend(na.show = FALSE)
+  ) +
   tm_borders(col = "darkred") +
-  tm_dots(col = "is_affected", # Use the dummy variable
-          palette = "darkred", 
-          size = 0.05, 
-          alpha = 0.5, 
-          showNA = FALSE, 
-          title = "Census Tracts Affected by Blackouts") + 
-  tm_compass(position = c("RIGHT", "BOTTOM")) + 
-  tm_scale_bar(position = c("RIGHT", "BOTTOM")) +  # Position the scale bar
-  tm_layout(main.title = "Blackouts and Median Income in Census Tracts",
-            main.title.size = 1.4,
-            main.title.position = c("left", "top"),
-            legend.outside = TRUE, 
-            legend.position = c("left", "bottom"),
-            bg.color = "skyblue1",  # Set background to blue
-            outer.margins = c(0.02, 0.02, 0.02, 0.02),  # Tighten the outer margins to avoid excess space
-            inner.margins = c(0, 0, 0, 0))  # Remove internal margins that could contribute to excessive background
+
+tm_shape(census_blackout) +
+  tm_dots(
+    fill = "is_affected",
+    fill_alpha = 0.5,
+    size = 0.05,
+    fill.legend = tm_legend(
+      title = "Census Tracts Affected by Blackouts",
+      na.show = FALSE
+    )
+  ) +
+
+tm_compass(position = c("RIGHT", "BOTTOM")) +
+
+tm_title(
+  "Blackouts and Median Income in Census Tracts",
+  size = 1.4,
+  position = c("left", "top")
+) +
+
+tm_layout(
+  legend.position = c("left", "bottom"),
+  outer.margins = c(0.02, 0.02, 0.02, 0.02),
+  inner.margins = c(0, 0, 0, 0)
+)
+
 
 
 ```
